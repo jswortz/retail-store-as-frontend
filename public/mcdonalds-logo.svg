@@ -1,0 +1,8 @@
+<svg width="60" height="60" viewBox="0 0 60 60" xmlns="http://www.w3.org/2000/svg">
+  <!-- McDonald's golden arches -->
+  <path d="M 10 50 C 10 30, 10 10, 20 10 C 25 10, 25 20, 25 35 C 25 20, 25 10, 30 10 C 35 10, 35 20, 35 35 C 35 20, 35 10, 40 10 C 50 10, 50 30, 50 50" 
+        fill="none" 
+        stroke="#ffbc0d" 
+        stroke-width="6" 
+        stroke-linecap="round"/>
+</svg>

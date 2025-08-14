@@ -1,0 +1,12 @@
+<svg width="120" height="40" viewBox="0 0 120 40" xmlns="http://www.w3.org/2000/svg">
+  <!-- Jewel-Osco logo -->
+  <g>
+    <!-- Diamond shape -->
+    <path d="M 10 20 L 20 10 L 30 20 L 20 30 Z" fill="#ff6900"/>
+    <path d="M 15 20 L 20 15 L 25 20 L 20 25 Z" fill="#00447c"/>
+    
+    <!-- Text -->
+    <text x="35" y="18" font-family="Helvetica Neue, Arial, sans-serif" font-size="16" font-weight="600" fill="#00447c">Jewel</text>
+    <text x="35" y="32" font-family="Helvetica Neue, Arial, sans-serif" font-size="16" font-weight="600" fill="#ff6900">Osco</text>
+  </g>
+</svg>

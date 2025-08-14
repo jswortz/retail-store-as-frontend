@@ -1,0 +1,35 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Agent Space Assistant</title>
+    <link rel="stylesheet" href="styles.css">
+    <link href="https://fonts.googleapis.com/icon?family=Material+Icons" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Google+Sans:wght@400;500&family=Roboto:wght@300;400;500&display=swap" rel="stylesheet">
+    <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
+    <script src="brand-config.js"></script>
+</head>
+<body>
+    <div class="app-container">
+        <header class="app-header">
+            <div class="header-content">
+                <img id="brand-logo" class="brand-logo" alt="Logo">
+                <h1 class="app-title">Agent Space Assistant</h1>
+            </div>
+        </header>
+        <main class="main-content">
+            <div id="chat-container">
+                <div id="chat-box"></div>
+                <div id="input-container">
+                    <input type="text" id="user-input" placeholder="Ask about your data...">
+                    <button id="send-btn">
+                        <i class="material-icons">send</i>
+                    </button>
+                </div>
+            </div>
+        </main>
+    </div>
+    <script src="script.js"></script>
+</body>
+</html>
