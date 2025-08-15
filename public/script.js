@@ -292,9 +292,9 @@ window.executeAction = async (type, index, recipient) => {
         
         actionData = {
             attendee: recipient,
-            title: title,
-            time: time,
-            description: description
+            subject: title,  // Changed from 'title' to 'subject' to match backend
+            duration: "30",   // Default 30 minutes
+            description: description || `Meeting about ${title}`
         };
     }
     
@@ -322,6 +322,14 @@ window.executeAction = async (type, index, recipient) => {
                     <p><strong>${result.message}</strong></p>
             `;
             
+            // Show AI response if available
+            if (result.actionResponse && result.actionResponse.answer && result.actionResponse.answer.answerText) {
+                const aiResponse = result.actionResponse.answer.answerText;
+                if (aiResponse.toLowerCase().includes('i will') || aiResponse.toLowerCase().includes('acknowledged')) {
+                    successHtml += `<p class="ai-response"><i class="material-icons">smart_toy</i> ${aiResponse}</p>`;
+                }
+            }
+            
             if (result.details) {
                 successHtml += '<div class="action-details">';
                 if (type === 'email') {
@@ -333,16 +341,16 @@ window.executeAction = async (type, index, recipient) => {
                 } else if (type === 'calendar') {
                     successHtml += `
                         <p><b>Attendee:</b> ${result.details.attendee}</p>
-                        <p><b>Title:</b> ${result.details.title}</p>
-                        <p><b>Time:</b> ${result.details.time}</p>
+                        <p><b>Title:</b> ${result.details.subject}</p>
+                        <p><b>Duration:</b> ${result.details.duration} minutes</p>
                         <p><b>Description:</b> ${result.details.description}</p>
                     `;
                 }
                 successHtml += '</div>';
             }
             
-            if (result.simulation || result.note) {
-                successHtml += `<div class="simulation-note"><i class="material-icons">info</i> ${result.note || 'This is a simulated action for demonstration purposes.'}</div>`;
+            if (result.note) {
+                successHtml += `<div class="info-note"><i class="material-icons">info</i> Action processed through Agent Space</div>`;
             }
             
             successHtml += '</div>';

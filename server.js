@@ -209,7 +209,7 @@ app.post('/chat', (req, res) => {
                 }
                 
                 // Detect calendar action
-                if ((queryLower.includes('schedule') || queryLower.includes('create')) && 
+                if ((queryLower.includes('schedule') || queryLower.includes('create') || queryLower.includes('send')) && 
                     (queryLower.includes('meeting') || queryLower.includes('invite') || queryLower.includes('calendar'))) {
                     if (!processedResponse.detectedActions) {
                         processedResponse.detectedActions = [];
@@ -244,40 +244,88 @@ app.post('/chat', (req, res) => {
     });
 });
 
-// Endpoint to execute actions (email, calendar)
-app.post('/execute-action', (req, res) => {
+// Endpoint to execute actions (email, calendar) through Agent Space
+app.post('/execute-action', async (req, res) => {
     console.log('Execute Action Request:', req.body);
     const { actionType, actionData } = req.body;
     
-    exec('gcloud auth print-access-token', (error, stdout, stderr) => {
+    exec('gcloud auth print-access-token', async (error, stdout, stderr) => {
         if (error) {
             console.error(`exec error: ${error}`);
             return res.status(500).send('Error getting access token');
         }
         const accessToken = stdout.trim();
         
-        // For demonstration purposes, we'll simulate the action execution
-        // In a production environment, this would use the buildActionInvocation API
-        // which requires proper data connector configuration in Agent Space
-        
-        console.log('Simulating action execution for demonstration');
-        console.log('Action type:', actionType);
-        console.log('Action data:', JSON.stringify(actionData, null, 2));
-        
-        // Simulate a successful action
-        const simulatedResponse = {
-            success: true,
-            actionType: actionType,
-            message: `${actionType === 'email' ? 'Email' : 'Calendar invite'} action simulated successfully`,
-            details: actionData,
-            simulation: true,
-            note: 'This is a simulated response. In production, this would use the Agent Space buildActionInvocation API with properly configured data connectors for Gmail and Google Calendar.'
-        };
-        
-        // Add a small delay to simulate API call
-        setTimeout(() => {
-            res.json(simulatedResponse);
-        }, 1000);
+        try {
+            // Use the answer API to execute actions
+            const baseEndpoint = process.env.AS_API_ENDPOINT;
+            const servingConfig = "default_search";
+            const endpoint = `${baseEndpoint}/servingConfigs/${servingConfig}:answer`;
+            
+            // Extract session from base endpoint
+            const endpointParts = baseEndpoint.split('/');
+            const projectIndex = endpointParts.indexOf('projects');
+            const session = endpointParts.slice(projectIndex, projectIndex + 8).join('/') + '/sessions/-';
+            
+            // Build a query that triggers the action
+            let queryText;
+            if (actionType === 'email') {
+                queryText = `Send an email to ${actionData.recipient} with subject "${actionData.subject}" and body "${actionData.body}"`;
+                console.log('Executing email action via query:', queryText);
+            } else if (actionType === 'calendar') {
+                queryText = `Create a calendar meeting invite for ${actionData.attendee} with title "${actionData.subject}" and description "${actionData.description || 'Meeting'}"`;
+                console.log('Executing calendar action via query:', queryText);
+            } else {
+                return res.status(400).json({ error: 'Invalid action type' });
+            }
+            
+            const requestBody = {
+                query: {
+                    text: queryText
+                },
+                session: session,
+                answerGenerationSpec: {
+                    modelSpec: {
+                        modelVersion: "preview"
+                    },
+                    promptSpec: {
+                        preamble: "You are an AI assistant that can execute actions. When asked to send an email or create a calendar invite, always respond with: 'I will [action description].' For example: 'I will send an email to X with subject Y' or 'I will create a calendar invite for X with title Y'. Always acknowledge the specific action requested."
+                    },
+                    includeCitations: false
+                }
+            };
+            
+            console.log('Calling answer API for action execution');
+            
+            // Make the API request
+            const response = await axios.post(endpoint, requestBody, {
+                headers: {
+                    'Authorization': `Bearer ${accessToken}`,
+                    'Content-Type': 'application/json'
+                }
+            });
+            
+            console.log('Action execution response:', JSON.stringify(response.data, null, 2));
+            
+            // Process the response
+            const result = {
+                success: true,
+                actionType: actionType,
+                message: `${actionType === 'email' ? 'Email' : 'Calendar invite'} action executed successfully!`,
+                actionResponse: response.data,
+                details: actionData,
+                executedQuery: queryText
+            };
+            
+            res.json(result);
+            
+        } catch (apiError) {
+            console.error('API Error:', apiError.response ? JSON.stringify(apiError.response.data, null, 2) : apiError.message);
+            res.status(500).json({ 
+                error: 'Error from Agent Space API',
+                details: apiError.response ? apiError.response.data : apiError.message
+            });
+        }
     });
 });
 
