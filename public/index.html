@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Agent Space Assistant</title>
+    <title>Gemini Enterprise Assistant</title>
     <link rel="stylesheet" href="styles.css">
     <link href="https://fonts.googleapis.com/icon?family=Material+Icons" rel="stylesheet">
     <link href="https://fonts.googleapis.com/css2?family=Google+Sans:wght@400;500&family=Roboto:wght@300;400;500&display=swap" rel="stylesheet">
@@ -20,6 +20,47 @@
         </header>
         <main class="main-content">
             <div id="chat-container">
+                <div id="assistant-selector-container">
+                    <label for="assistant-selector">Select Assistant:</label>
+                    <select id="assistant-selector">
+                        <option value="">Loading assistants...</option>
+                    </select>
+                    <button id="refresh-assistants-btn" title="Refresh assistants">
+                        <i class="material-icons">refresh</i>
+                    </button>
+                    <button id="agent-info-btn" title="Learn about agent types">
+                        <i class="material-icons">info</i>
+                    </button>
+                    <button id="agent-gallery-btn" title="View agent gallery">
+                        <i class="material-icons">apps</i>
+                    </button>
+                    <label class="stream-toggle">
+                        <input type="checkbox" id="stream-mode-toggle">
+                        <span>Stream with thoughts</span>
+                    </label>
+                </div>
+                <div id="agent-info-panel" style="display: none;">
+                    <h3>Available Agent Types</h3>
+                    <div class="agent-type-card">
+                        <h4>🔍 Deep Research Agent</h4>
+                        <p>Specializes in thorough analysis and comprehensive research. Best for complex questions requiring in-depth exploration.</p>
+                    </div>
+                    <div class="agent-type-card">
+                        <h4>💡 Idea Generator Agent</h4>
+                        <p>Excels at creative brainstorming and innovative solution generation. Perfect for exploring new possibilities.</p>
+                    </div>
+                    <div class="agent-type-card">
+                        <h4>🤖 General Assistant</h4>
+                        <p>Handles general queries, document searches, and action requests. Your go-to for everyday tasks.</p>
+                    </div>
+                </div>
+                <div id="agent-gallery-panel" style="display: none;">
+                    <h3>Agent Gallery</h3>
+                    <p class="gallery-subtitle">Discover prebuilt agents and create custom agents to boost your productivity</p>
+                    <div class="agent-gallery-grid">
+                        <!-- Agent cards will be dynamically added here -->
+                    </div>
+                </div>
                 <div id="chat-box"></div>
                 <div id="input-container">
                     <input type="text" id="user-input" placeholder="Ask about your data...">

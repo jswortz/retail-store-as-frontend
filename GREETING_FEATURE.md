@@ -41,7 +41,7 @@ The application now supports friendly, conversational responses to informal gree
 ## Examples
 
 **User**: "Hello"
-**Assistant**: "Hello! Welcome to Ulta Beauty Assistant. How can I help you today?"
+**Assistant**: "Hello! Welcome to the AI Assistant. How can I help you today?"
 
 **User**: "Thank you"
 **Assistant**: "You're welcome! Is there anything else I can help you with?"

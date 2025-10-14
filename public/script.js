@@ -1,14 +1,14 @@
 document.addEventListener('DOMContentLoaded', () => {
     // Apply brand configuration
     const brand = applyBrand();
-    
+
     // Set logo
     const logoElement = document.getElementById('brand-logo');
     if (logoElement && brand.logo) {
         logoElement.src = brand.logo.url;
         logoElement.style.width = brand.logo.width;
         logoElement.style.height = brand.logo.height;
-        
+
         // Apply invert filter if needed (for white logos on light backgrounds)
         if (brand.logo.invertFilter) {
             logoElement.style.filter = 'invert(1)';
@@ -16,13 +16,316 @@ document.addEventListener('DOMContentLoaded', () => {
             logoElement.style.filter = 'none';
         }
     }
-    
+
     // Update page title with brand name
     document.title = `${brand.name} - Agent Space Assistant`;
-    
+
     const chatBox = document.getElementById('chat-box');
     const userInput = document.getElementById('user-input');
     const sendBtn = document.getElementById('send-btn');
+    const assistantSelector = document.getElementById('assistant-selector');
+    const refreshAssistantsBtn = document.getElementById('refresh-assistants-btn');
+    const agentInfoBtn = document.getElementById('agent-info-btn');
+    const agentInfoPanel = document.getElementById('agent-info-panel');
+    const agentGalleryBtn = document.getElementById('agent-gallery-btn');
+    const agentGalleryPanel = document.getElementById('agent-gallery-panel');
+    const streamModeToggle = document.getElementById('stream-mode-toggle');
+
+    // Store the current selected assistant and all agents
+    let selectedAssistant = null;
+    let allAgents = [];
+
+    // Predefined agent types based on the image
+    const predefinedAgents = [
+        {
+            name: 'deep-research',
+            displayName: 'Deep Research',
+            icon: '🔍',
+            description: 'Get in-depth answers grounded in web research.',
+            capabilities: 'Web search • Citation analysis • Comprehensive research',
+            available: false
+        },
+        {
+            name: 'idea-generator',
+            displayName: 'Idea Generation',
+            icon: '💡',
+            description: 'Generate and refine innovative solutions through a competitive, multi-agent tournament.',
+            capabilities: 'Creative brainstorming • Solution refinement • Multi-perspective analysis',
+            available: false,
+            badge: 'Preview'
+        },
+        {
+            name: 'notebooklm',
+            displayName: 'NotebookLM',
+            icon: '📓',
+            description: 'Quickly summarize and take notes for research with AI.',
+            capabilities: 'Document summarization • Note-taking • Research assistance',
+            available: false
+        },
+        {
+            name: 'nl2sql',
+            displayName: 'Customer Intelligence NL2SQL Agent',
+            icon: '🗄️',
+            description: 'This agent takes natural language queries and executes SQL against a BQ Dataset containing transaction and customer data.',
+            capabilities: 'Natural language to SQL • Data analysis • Transaction insights',
+            available: false
+        }
+    ];
+
+    // Function to load assistants
+    const loadAssistants = async () => {
+        assistantSelector.innerHTML = '<option value="">Loading assistants...</option>';
+        refreshAssistantsBtn.querySelector('.material-icons').classList.add('rotating');
+
+        try {
+            const response = await fetch('/list-agents');
+            const data = await response.json();
+
+            if (data.success && data.agents) {
+                allAgents = data.agents;
+                assistantSelector.innerHTML = '';
+
+                // Add default option
+                const defaultOption = document.createElement('option');
+                defaultOption.value = '';
+                defaultOption.textContent = 'Select an assistant...';
+                assistantSelector.appendChild(defaultOption);
+
+                // Add each assistant
+                data.agents.forEach(agent => {
+                    const option = document.createElement('option');
+                    option.value = agent.name;
+
+                    // Extract display name and determine agent type
+                    const displayName = agent.displayName || agent.name.split('/').pop();
+                    let agentType = '';
+                    let typeIcon = '';
+
+                    if (displayName.toLowerCase().includes('deep') && displayName.toLowerCase().includes('research')) {
+                        agentType = 'Deep Research';
+                        typeIcon = '🔍';
+                    } else if (displayName.toLowerCase().includes('idea') || displayName.toLowerCase().includes('generator')) {
+                        agentType = 'Idea Generator';
+                        typeIcon = '💡';
+                    } else if (displayName.toLowerCase().includes('general') || displayName.toLowerCase().includes('default')) {
+                        agentType = 'General Assistant';
+                        typeIcon = '🤖';
+                    }
+
+                    // Build option text
+                    let optionText = displayName;
+                    if (typeIcon) {
+                        optionText = `${typeIcon} ${displayName}`;
+                    }
+                    if (agentType && !displayName.includes(agentType)) {
+                        optionText += ` - ${agentType}`;
+                    }
+
+                    // Add description of enabled actions if available
+                    const actions = [];
+                    if (agent.enabledActions) {
+                        Object.values(agent.enabledActions).forEach(connector => {
+                            if (connector.actionInfo) {
+                                connector.actionInfo.forEach(action => {
+                                    actions.push(action.actionDisplayName);
+                                });
+                            }
+                        });
+                    }
+
+                    if (actions.length > 0) {
+                        optionText += ` (${actions.join(', ')})`;
+                    }
+
+                    option.textContent = optionText;
+
+                    // Store agent metadata as data attributes
+                    option.setAttribute('data-agent-type', agentType);
+                    option.setAttribute('data-agent-icon', typeIcon);
+
+                    assistantSelector.appendChild(option);
+                });
+
+                // Select first assistant by default if only one exists
+                if (data.agents.length === 1) {
+                    assistantSelector.selectedIndex = 1;
+                    selectedAssistant = data.agents[0].name;
+                }
+
+                // Update agent gallery
+                updateAgentGallery();
+            }
+        } catch (error) {
+            console.error('Error loading assistants:', error);
+            assistantSelector.innerHTML = '<option value="">Error loading assistants</option>';
+        } finally {
+            refreshAssistantsBtn.querySelector('.material-icons').classList.remove('rotating');
+        }
+    };
+
+    // Function to update agent gallery
+    const updateAgentGallery = () => {
+        const galleryGrid = agentGalleryPanel.querySelector('.agent-gallery-grid');
+        galleryGrid.innerHTML = '';
+
+        // Add predefined agents
+        predefinedAgents.forEach(agent => {
+            const card = document.createElement('div');
+            card.className = 'agent-gallery-card';
+            if (agent.name === selectedAssistant) {
+                card.classList.add('selected');
+            }
+
+            let cardHtml = `
+                <h4>
+                    <span class="agent-icon">${agent.icon}</span>
+                    ${agent.displayName}
+                    ${agent.badge ? `<span class="preview-badge">${agent.badge}</span>` : ''}
+                </h4>
+                <p>${agent.description}</p>
+                <div class="agent-capabilities">${agent.capabilities}</div>
+            `;
+
+            card.innerHTML = cardHtml;
+
+            if (agent.available) {
+                card.style.cursor = 'pointer';
+                card.addEventListener('click', () => selectAgentFromGallery(agent.name));
+            } else {
+                card.style.opacity = '0.6';
+                card.style.cursor = 'not-allowed';
+            }
+
+            galleryGrid.appendChild(card);
+        });
+
+        // Add actual agents from the API
+        allAgents.forEach(agent => {
+            const displayName = agent.displayName || agent.name.split('/').pop();
+
+            // Check if this is the default assistant
+            if (displayName.toLowerCase().includes('default')) {
+                const card = document.createElement('div');
+                card.className = 'agent-gallery-card';
+                if (agent.name === selectedAssistant) {
+                    card.classList.add('selected');
+                }
+
+                const actions = [];
+                if (agent.enabledActions) {
+                    Object.values(agent.enabledActions).forEach(connector => {
+                        if (connector.actionInfo) {
+                            connector.actionInfo.forEach(action => {
+                                actions.push(action.actionDisplayName);
+                            });
+                        }
+                    });
+                }
+
+                let cardHtml = `
+                    <h4>
+                        <span class="agent-icon">🤖</span>
+                        ${displayName}
+                    </h4>
+                    <p>General assistant for document searches and action requests.</p>
+                    <div class="agent-capabilities">${actions.length > 0 ? actions.join(' • ') : 'Document search • Email • Calendar'}</div>
+                `;
+
+                card.innerHTML = cardHtml;
+                card.style.cursor = 'pointer';
+                card.addEventListener('click', () => selectAgentFromGallery(agent.name));
+
+                galleryGrid.appendChild(card);
+            }
+        });
+    };
+
+    // Function to select agent from gallery
+    const selectAgentFromGallery = (agentName) => {
+        selectedAssistant = agentName;
+
+        // Update selector
+        const options = assistantSelector.options;
+        for (let i = 0; i < options.length; i++) {
+            if (options[i].value === agentName) {
+                assistantSelector.selectedIndex = i;
+                break;
+            }
+        }
+
+        // Update gallery display
+        updateAgentGallery();
+
+        // Close gallery
+        agentGalleryPanel.style.display = 'none';
+
+        // Show selection message
+        const selectedAgent = allAgents.find(a => a.name === agentName) ||
+                            predefinedAgents.find(a => a.name === agentName);
+        if (selectedAgent) {
+            addMessage(`Selected: ${selectedAgent.displayName || agentName}`, 'bot');
+        }
+    };
+
+    // Load assistants on page load
+    loadAssistants();
+
+    // Handle assistant selection
+    assistantSelector.addEventListener('change', (e) => {
+        selectedAssistant = e.target.value;
+        if (selectedAssistant) {
+            const selectedOption = assistantSelector.options[assistantSelector.selectedIndex];
+            const agentType = selectedOption.getAttribute('data-agent-type');
+            const agentIcon = selectedOption.getAttribute('data-agent-icon');
+
+            let message = `Switched to assistant: ${selectedOption.text}`;
+
+            // Add specific guidance based on agent type
+            if (agentType === 'Deep Research') {
+                message += '\n\nThis assistant specializes in:\n• Thorough analysis and comprehensive research\n• Providing multiple perspectives\n• In-depth exploration of topics\n• Evidence-based answers with citations';
+            } else if (agentType === 'Idea Generator') {
+                message += '\n\nThis assistant specializes in:\n• Creative brainstorming\n• Innovative solution generation\n• Out-of-the-box thinking\n• Multiple creative alternatives';
+            } else if (agentType === 'General Assistant') {
+                message += '\n\nThis assistant can help with:\n• General questions\n• Document searches\n• Email and calendar management\n• Store policy inquiries';
+            }
+
+            addMessage(message, 'bot');
+        }
+    });
+
+    // Handle refresh button
+    refreshAssistantsBtn.addEventListener('click', loadAssistants);
+
+    // Handle agent info button
+    agentInfoBtn.addEventListener('click', () => {
+        if (agentInfoPanel.style.display === 'none') {
+            agentInfoPanel.style.display = 'block';
+            agentGalleryPanel.style.display = 'none';
+            agentInfoBtn.querySelector('.material-icons').textContent = 'info';
+            agentInfoBtn.style.backgroundColor = 'var(--color-primary)';
+            agentInfoBtn.style.color = 'white';
+        } else {
+            agentInfoPanel.style.display = 'none';
+            agentInfoBtn.querySelector('.material-icons').textContent = 'info';
+            agentInfoBtn.style.backgroundColor = '';
+            agentInfoBtn.style.color = '';
+        }
+    });
+
+    // Handle agent gallery button
+    agentGalleryBtn.addEventListener('click', () => {
+        if (agentGalleryPanel.style.display === 'none') {
+            agentGalleryPanel.style.display = 'block';
+            agentInfoPanel.style.display = 'none';
+            agentGalleryBtn.style.backgroundColor = 'var(--color-primary)';
+            agentGalleryBtn.style.color = 'white';
+            updateAgentGallery();
+        } else {
+            agentGalleryPanel.style.display = 'none';
+            agentGalleryBtn.style.backgroundColor = '';
+            agentGalleryBtn.style.color = '';
+        }
+    });
 
     const addMessage = (content, sender, isHtml = false) => {
         const messageElement = document.createElement('div');
@@ -126,13 +429,22 @@ document.addEventListener('DOMContentLoaded', () => {
             return;
         }
 
+        // Check if stream mode is enabled
+        if (streamModeToggle.checked && selectedAssistant) {
+            handleStreamingRequest(query);
+            return;
+        }
+
         try {
             const response = await fetch('/chat', {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',
                 },
-                body: JSON.stringify({ query }),
+                body: JSON.stringify({
+                    query,
+                    assistant: selectedAssistant
+                }),
             });
 
             if (!response.ok) {
@@ -244,6 +556,117 @@ document.addEventListener('DOMContentLoaded', () => {
         } catch (error) {
             console.error('Error:', error);
             addMessage('Sorry, something went wrong.', 'bot');
+        }
+    };
+
+    // Function to handle streaming requests
+    const handleStreamingRequest = async (query) => {
+        // Create a message container for the streaming response
+        const messageContainer = document.createElement('div');
+        messageContainer.classList.add('message', 'bot-message');
+
+        // Add streaming indicator
+        const streamingIndicator = document.createElement('div');
+        streamingIndicator.className = 'streaming-indicator';
+        streamingIndicator.innerHTML = '<i class="material-icons">psychology</i> Thinking...';
+        messageContainer.appendChild(streamingIndicator);
+
+        chatBox.appendChild(messageContainer);
+        chatBox.scrollTop = chatBox.scrollHeight;
+
+        const thoughtsContainer = document.createElement('div');
+        const answerContainer = document.createElement('div');
+        answerContainer.className = 'answer-content';
+
+        messageContainer.appendChild(thoughtsContainer);
+        messageContainer.appendChild(answerContainer);
+
+        try {
+            const response = await fetch('/stream-assist', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({
+                    query,
+                    assistant: selectedAssistant
+                }),
+            });
+
+            if (!response.ok) {
+                throw new Error('Network response was not ok');
+            }
+
+            const reader = response.body.getReader();
+            const decoder = new TextDecoder();
+            let buffer = '';
+            let currentThought = '';
+            let currentAnswer = '';
+
+            while (true) {
+                const { done, value } = await reader.read();
+                if (done) break;
+
+                buffer += decoder.decode(value, { stream: true });
+                const lines = buffer.split('\n');
+                buffer = lines.pop(); // Keep the last incomplete line in the buffer
+
+                for (const line of lines) {
+                    if (line.startsWith('data: ')) {
+                        try {
+                            const data = JSON.parse(line.slice(6));
+
+                            // Handle different types of streaming data
+                            if (data.thought) {
+                                // Add thought bubble
+                                const thoughtBubble = document.createElement('div');
+                                thoughtBubble.className = 'thought-bubble';
+                                thoughtBubble.textContent = data.thought;
+                                thoughtsContainer.appendChild(thoughtBubble);
+                                chatBox.scrollTop = chatBox.scrollHeight;
+                            } else if (data.answer) {
+                                // Update answer content
+                                currentAnswer += data.answer;
+                                answerContainer.innerHTML = marked.parse(currentAnswer);
+                                streamingIndicator.style.display = 'none';
+                                chatBox.scrollTop = chatBox.scrollHeight;
+                            } else if (data.error) {
+                                streamingIndicator.style.display = 'none';
+                                answerContainer.textContent = `Error: ${data.error}`;
+                            }
+                        } catch (e) {
+                            console.error('Error parsing streaming data:', e);
+                        }
+                    }
+                }
+            }
+
+            // Process any remaining buffer
+            if (buffer.trim()) {
+                try {
+                    if (buffer.startsWith('data: ')) {
+                        const data = JSON.parse(buffer.slice(6));
+                        if (data.answer) {
+                            currentAnswer += data.answer;
+                            answerContainer.innerHTML = marked.parse(currentAnswer);
+                        }
+                    }
+                } catch (e) {
+                    console.error('Error parsing final buffer:', e);
+                }
+            }
+
+            streamingIndicator.style.display = 'none';
+
+            // If no answer was received, show a default message
+            if (!currentAnswer && thoughtsContainer.children.length === 0) {
+                answerContainer.textContent = 'No response received from the assistant.';
+            }
+
+        } catch (error) {
+            console.error('Streaming error:', error);
+            streamingIndicator.style.display = 'none';
+            answerContainer.textContent = 'Sorry, something went wrong with the streaming request.';
         }
     };
 

@@ -283,7 +283,7 @@ const BRAND_CONFIG = {
 };
 
 // Set the active brand (change this to switch brands)
-const ACTIVE_BRAND = 'ulta'; // Change to 'google', 'microsoft', 'amazon', 'ulta', 'walmart', 'mcdonalds', 'wendys', 'kroger', 'jewelosco', or 'custom'
+const ACTIVE_BRAND = 'mcdonalds'; // Change to 'google', 'microsoft', 'amazon', 'ulta', 'walmart', 'mcdonalds', 'wendys', 'kroger', 'jewelosco', or 'custom'
 
 // Apply brand configuration
 function applyBrand() {
